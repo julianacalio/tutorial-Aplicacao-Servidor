@@ -1,0 +1,230 @@
+\documentclass[11pt,a4paper]{report}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{makeidx}
+\usepackage{graphicx}
+\usepackage{setspace}
+\usepackage[english, portuguese]{babel}
+\usepackage{verbatim}
+\usepackage{subfigure}
+\usepackage{fancyhdr}
+\usepackage{indentfirst}
+\usepackage{listings}
+\lstset{
+  language=Java,
+  basicstyle=\ttfamily\small, 
+  keywordstyle=\color{Blue}\bfseries,
+  stringstyle=\color{Green},
+  commentstyle=\color{Black},
+  morecomment=[s][\color{Grey}]{/**}{*/},
+  extendedchars=true, 
+  showspaces=false, 
+  showstringspaces=false, 
+  numbers=left,
+  numberstyle=\tiny,
+  breaklines=true, 
+  backgroundcolor=\color{lavender}, 
+  breakautoindent=true, 
+  captionpos=b,
+  xleftmargin=0pt,
+  tabsize=4
+}
+\usepackage{color}
+\usepackage{xcolor}
+\usepackage[top=2.5cm, bottom=2.5cm, left=2.5cm, right=2.5cm]{geometry}
+\renewcommand{\footrulewidth}{0.4pt}
+\renewcommand{\headrulewidth}{0.4pt}
+\definecolor{airforceblue}{rgb}{0.36, 0.54, 0.66}
+\definecolor{arsenic}{rgb}{0.23, 0.27, 0.29}
+\definecolor{blue(pigment)}{rgb}{0.2, 0.2, 0.6}
+\definecolor{brightmaroon}{rgb}{0.76, 0.13, 0.28}
+\definecolor{lavender}{rgb}{0.902, 0.902, 0.980}
+\definecolor{Grey}{rgb}{0.663, 0.663, 0.663}
+\definecolor{Blue}{rgb}{0.000, 0.000, 1.000}
+\definecolor{Green}{rgb}{0.196, 0.804, 0.196}
+\definecolor{Black}{rgb}{0.000,0.000,0.000}
+
+
+\title{Implantar uma aplicação Java Web em um servidor remoto}
+
+\author{Juliana}
+
+\date{\today}
+
+\begin{document}
+\begin{titlepage}
+\centering
+
+\textbf{UNIVERSIDADE FEDERAL DO ABC\\\vspace{4.5cm}
+TUTORIAL PARA IMPLANTAÇÃO DE UMA APLICAÇÃO JAVA WEB EM UM SERVIDOR REMOTO\\\vspace{3.5cm}
+%Juliana Gamarano Calió%\\ 
+Orientador Prof. Dr. André Guilherme Ribeiro Balan\\\vspace{6cm}
+UNIVERSIDADE FEDERAL DO ABC\\\vspace{2cm}
+Santo André, São Paulo\\\today
+}
+\end{titlepage}
+\onehalfspacing
+
+
+\tableofcontents
+
+
+\newpage
+
+\chapter{Introdução}
+
+O servidor no qual essa aplicação vai rodar é o Debian Wheezy Server, sem interface gráfica. Nesse servidor estão instalados:o servidor de SSH, o MySQL 5.6 e o servidor de aplicações JBoss 7.1. A aplicação foi desenvolvida em Java Web utilizando a IDE Netbeans.
+
+\section{Servidor SSH}
+
+Um servidor SSH utiliza o protocolo \textbf{secure shell}, que é um protocolo para realização de login remoto seguro e outros serviços seguros de rede através de uma rede insegura.  \cite{ylonen2006secure} Esse protocolo possui três componentes principais:
+
+\begin{itemize}
+\item O Protocolo da camada de transporte [SSH-TRANS]: fornece autenticação, confidencialidade e integridade do servidor e opcionalmente compressão. Normalmente, a camada de transporte será executada através de uma conexão TCP/IP, mas também pode ser usada em qualquer outro fluxo de dados confiável. 
+\item O protocolo de autenticação de usuário [SSH-USERAUTH]: autentica o lado do cliente (client-side) do usuário para o servidor. É executado sobre o protocolo da camada de transporte.
+\item O protocolo de conexão [SSH-CONNECT]: faz a multiplexação de túnel criptografado em vários canais lógicos. Esse protocolo roda sobre o protocolo de autenticação do usuário.
+\end{itemize}
+
+O cliente envia uma solicitação de algum serviço após o estabelecimento de uma conexão de camada de transporte segura foi estabelecida. Um segunda solicitação de serviço é enviada após a autenticação do usuário ser completada. Isso permite que novos protocolos sejam definidos e coexistam com os protocolos apresentados acima. \cite{ylonen2006secure}
+ 
+
+\newpage
+
+\chapter{Passos para implantação da aplicação no servidor}
+
+Nesse capítulo serão apresentados todos os passos para a implantação de uma aplicação web, juntamente com sua base de dados, em um servidor remoto que faz autenticação via SSH. 
+
+\section{Exportação do banco de dados MySQL}
+
+Para que o programa rode no servidor remoto com o banco de dados atualizado (com as mesmas informações do banco armazenado onde a aplicação está rodando atualmente) é necessário exportar esse banco para um arquivo .sql que será importado em um banco dentro do servidor. Isso é feito através do comando:\\
+
+\fcolorbox{black}{black}{\textcolor{white}{mysqldump -u [USERNAME] -p [DATABASE-NAME] $>$ database.sql}} \\
+
+Onde [USERNAME] é o nome de usuário do servidor MySQL que tem acesso à base de dados que se deseja exportar, [DATABASE-NAME] é o nome da base de dados e database é o nome do arquivo .sql que conterá as informações do banco. Após a inserção desse comando, será requisitada a senha do usuário. 
+
+
+\section{Ajustes na configuração da aplicação \label{configuracao}}
+
+No arquivo de configuração do Hibernate (hibernate.cfg.xml), nas seguintes linhas:
+
+\lstset{language=Java}
+\begin{lstlisting}
+<property name="hibernate.connection.url">jdbc:mysql://localhost:3306/NomeBanco?autoReconnect=true</property>
+<property name="hibernate.connection.username">usuario</property>
+<property name="hibernate.connection.password">senha</property>
+\end{lstlisting}
+
+É necessário deixar o \textbf{NomeBanco} igual ao banco de dados que será criado no servidor para armazenar as informações da aplicação, bem como o nome de \textbf{usuário} e a \textbf{senha} do usuário que será criado no servidor MySQL do servidor remoto para fazer o acesso ao banco. Por questões de segurança, não é recomendado utilizar o usuário root.
+
+Caso tenha sido criado um domínio personalizado para a aplicação no servidor (diferente do endereço web padrão definido 
+
+
+\section{Criação de um arquivo .war da aplicação em Java EE}
+
+Um arquivo WAR (Web Application Archive) é um arquivo JAR usado para distribuir recursos como JavaServer Pages, Servlets Java, classes Java, arquivos XML, entre outros, que constituem uma aplicação web. \\
+
+No Netbeans, para gerar esse arquivo, basta clicar com o botão direito no nome do projeto $\rightarrow$ Limpar e construir. O arquivo será gerado na pasta \textbf{dist} do projeto. 
+
+
+
+\section{Criação de um par de chaves RSA}
+
+A autenticação no servidor via SSH será feita através de um par de chaves RSA, por ser um método mais seguro do que fazer o login por meio de um usuário e uma senha. \\
+
+O RSA é um sistema criptográfico de chave pública desenvolvido em 1977 pelos professores do MIT Ronald \textbf{R}ivest e Adi \textbf{S}hamir e  e pelo professor do USC Leonard \textbf{A}dleman. Esse algoritmo gera um par de chaves pública e privada através de números primos grandes, sendo intratável obter a chave privada a partir da chave pública. O RSA, assim como os demais algoritmos de chave pública, utiliza uma função unidirecional com segredo, com a qual é tratável calcular $y$, sendo $y = f(x)$, mas intratável o cálculo de $x = f^{-1}(y)$, a menos que se conheça o segredo. Assim, é permitido que a chave pública seja de conhecimento de qualquer pessoa, pois somente o proprietário do par de chaves, que conhece o segredo, pode calcular a função em ambas as direções, cifrando e decifrando, enquanto os demais apenas conseguirão calcular a função de ciframento. \cite{pereira2008sistema}\\
+
+Para gerar o par de chaves foi utilizado o \textbf{puttygen} que é uma ferramenta para gerar e manipular pares de chave SSH pública e privada. Ele é parte do \textbf{PuTTY}, um dos programas de cliente mais populares de SSH. Os passos necessários são descritos abaixo \footnote{http://linux.die.net/man/1/puttygen}:
+
+\begin{enumerate}
+\item Instalar o PuTTY, através do comando:
+
+\fcolorbox{black}{black}{\textcolor{white}{sudo apt-get install putty}}
+
+\item Gerar o par de chaves SSH-2 RSA e salvá-lo no formato do Putty:
+
+\fcolorbox{black}{black}{\textcolor{white}{puttygen -t rsa -C "my home key" -o mykey.ppk}}
+
+Onde o que está entre aspas ("\textbf{my home key}") é um comentário que identifica o par de chaves e o arquivo \textbf{mykey.ppk} é o arquivo salvo com o par de chaves. Tanto o comentário quanto o nome do arquivo (mantendo a extensão .ppk) podem ser modificados. 
+
+Esse comando pede a inserção de uma senha (segredo) e dessa forma é gerado um arquivo .ppk que pode ser lido com um editor de texto. Esse arquivo possui um cabeçalho contendo o tipo de criptografia utilizado, o comentário que identifica o par de chave e as linhas pública e privada do par.
+
+\item Converter a chave para o formato OpenSSH de chave privada:
+
+\fcolorbox{black}{black}{\textcolor{white}{puttygen mykey.ppk -O private-openssh -o my-openssh-key}}
+
+Sendo \textbf{mykey.ppk} o arquivo gerado anterioremente e \textbf{my-openssh-key} o nome que deverá ser dado à chave privada no formato OpenSSH que será criada. Essa conversão é necessária para a autenticação do usuário no servidor. 
+
+\end{enumerate}
+
+\section{Autenticação no servidor \label{autenticao}}
+
+Após a geração do par de chaves, é necessário a criação de um usuário no lado do servidor e a atribuição da chave pública do par gerado anteriormente para esse usuário. Feito isso, para fazer a autenticação no servidor é necessário abrir um terminal no lado do cliente, navegar até a pasta onde está salvo o arquivo de chave privada (\textbf{my-openssh-key}) gerado anteriormente e digitar o seguinte comando: \\
+
+\fcolorbox{black}{black}{\textcolor{white}{ssh -i my-openssh-key username@IPServer -p PNumber
+}}
+
+\begin{itemize}
+\item \textbf{my-openssh-key}: chave privada no formato OpenSSH
+\item \textbf{username}: nome de usuário registrado no servidor
+\item \textbf{IPServer}: número de IP do servidor
+\item \textbf{PNumber}: número da porta do servidor de SSH
+\end{itemize}
+
+Após a execução desse comando, será pedida a senha da chave privada, que deve ser digitada em até 10 segundos. 
+
+\section{Tranferência do banco de dados para o servidor}
+
+É necessário transferir o arquivo .sql gerado pela exportação do banco para o servidor no qual a aplicação será implantada. Isso será feito de maneira segura através do PSCP (\textbf{P}utty \textbf{S}ecure \textbf{C}o\textbf{P}y). Para isso, é necessário salvar o arquivo com o par de chaves .ppk e o arquivo com o backup do banco (.sql) em uma mesma pasta, navegar até essa pasta através do terminal e digitar o seguinte comando e informar a senha de chave privada: \\
+
+\fcolorbox{black}{black}{\textcolor{white}{pscp -i mykey.ppk -P PNumber database.sql username@IPServer:/home/username}} \\
+
+Isso irá transferir uma cópia do arquivo database.sql para a pasta home do usuário no servidor.
+
+\subsection{Importação do banco de dados}
+
+Feita a transferência do arquivo de \textit{backup}, é necessário fazer a autenticação no servidor como mostrado na sessão \ref{autenticao}. Após a autenticação no servidor, é possível verificar se o arquivo foi transferido corretamente com o comando \textbf{ls} na pasta do usuário. Para importar o arquivo .sql em um banco de dados, primeiramente deve-se criar esse banco no servidor MySQL. Isso será feito através do usuário root. É necessário que esse banco de dados tenha o mesmo nome do banco indicado nas configurações da aplicação (\ref{configuracao}): \\
+
+\noindent{\fcolorbox{black}{black}{\textcolor{white}{mysql -u root -p}} \\
+\fcolorbox{black}{black}{\textcolor{white}{Enter password: *****}}\\
+\fcolorbox{black}{black}{\textcolor{white}{create database NomeBanco; }} \\}
+
+A importação do banco é feita através do comando:\\
+
+\fcolorbox{black}{black}{\textcolor{white}{source /home/username/database.sql;}}\\
+
+\subsection{Criação de um usuário do banco de dados}
+
+Como foi mencionado, por questões de segurança, não é recomendado que a aplicação tenha acesso ao banco como usuário root. Para criar um novo usuário para o banco de dados, o seguinte comando é utilizado:\\
+
+\fcolorbox{black}{black}{\textcolor{white}{create user 'usuario'@'localhost' identified by 'senha';}}\\
+
+Os campos \textbf{usuario} e \textbf{senha} devem ser iguais aos informados nas configurações da aplicação. (\ref{configuracao}).
+
+Também devem ser configurados quais privilégios esse usuário tem (a quais bancos ele pode ter acesso e que tipo de acesso: leitura, escrita, leitura e escrita, etc). Para essa aplicação, é suficiente que ele tenha acesso ao banco da aplicação e todas suas tabelas e que ele possa realizar as operações de criar, deletar, inserir e atualizar as tabelas: \footnote{https://www.digitalocean.com/community/tutorials/how-to-create-a-new-user-and-grant-permissions-in-mysql} \\
+
+\fcolorbox{black}{black}{\textcolor{white}{grant create, drop, delete, insert, select, update on NomeBanco.* to 'usuario'@'localhost';}}\\
+
+
+\section{Tranferência da aplicação para o servidor}
+
+Para transferir o arquivo .war para o servidor, primeiro é necessário efetuar o logout e depois realizar os mesmos procedimentos descritos para a transferência do arquivo .sql: \\
+
+\fcolorbox{black}{black}{\textcolor{white}{pscp -i mykey.ppk -P PNumber Aplicacao.war username@IPServer:/home/username}} \\
+
+Após a transferência, deve ser feita a autenticação no servidor (\ref{autenticao}). Uma vez logado no servidor, é necessária a troca do usuário para appserver, utilizando o seguinte comando e informando a senha do appserver:
+
+\fcolorbox{black}{black}{\textcolor{white}{su appserver}} \\
+
+Feita a troca do usuário, o arquivo .war deve ser movido para a pasta de deployments do Jboss: \\
+
+\fcolorbox{black}{black}{\textcolor{white}{cp Aplicacao.war /usr/local/share/jboss/standalone/deployments/;}} \\
+
+Dessa forma, a aplicação já estará rodando no endereço da web destinado a ela.
+
+
+\bibliographystyle{plain}
+\bibliography{bibliografia}
+
+\end{document}
